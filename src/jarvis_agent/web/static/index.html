@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jarvis — Agent Inspector</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">J</span>
+      <div>
+        <h1>Jarvis</h1>
+        <p>Agent Inspector · prototype local-first</p>
+      </div>
+    </div>
+    <div class="session-strip">
+      <span id="connectionBadge" class="badge neutral">Connexion…</span>
+      <span id="profileBadge" class="badge">Profil : aucun</span>
+      <span id="meetingTimer" class="mono">00:00</span>
+    </div>
+  </header>
+
+  <section class="control-bar" aria-label="Contrôles globaux">
+    <div class="state-controls">
+      <button data-state="MIC_OFF" class="state-button danger">Micro coupé</button>
+      <button data-state="STANDBY" class="state-button">Veille locale</button>
+      <button data-state="TRANSCRIBING" class="state-button">Transcription</button>
+      <button data-state="INTERACTIVE" class="state-button accent">Interactif</button>
+    </div>
+    <div class="meeting-controls">
+      <button id="startMeeting">Démarrer réunion</button>
+      <button id="endMeeting">Terminer</button>
+      <button id="analyzeNow">Analyser maintenant</button>
+      <button id="emergencyStop" class="danger">Arrêt d’urgence</button>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="column sensing">
+      <article class="card">
+        <div class="card-title"><h2>Audio</h2><span id="localRemoteBadge" class="badge neutral">inactif</span></div>
+        <div class="metric-row"><span>État</span><strong id="agentState">MIC_OFF</strong></div>
+        <div class="level-track"><div id="audioLevel" class="level-value"></div></div>
+        <div class="metric-grid">
+          <div><span>Buffer</span><strong id="bufferValue">0 / 5 000 ms</strong></div>
+          <div><span>Frames perdues</span><strong id="droppedFrames">0</strong></div>
+        </div>
+        <div class="button-row">
+          <button id="startBrowserMic">Activer le micro navigateur</button>
+          <button id="stopBrowserMic">Arrêter capture</button>
+        </div>
+        <p id="micHelp" class="hint">Le navigateur demande l’autorisation. En veille, l’audio reste dans le service local.</p>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Wake word</h2><span id="wakeScore" class="mono">0,00</span></div>
+        <label>Phrase d’activation<input id="activationPhrase" value="hey jarvis" /></label>
+        <label>Phrase de désactivation<input id="deactivationPhrase" value="merci jarvis" /></label>
+        <label>Seuil local<input id="wakeThreshold" type="number" min="0" max="1" step="0.01" value="0.89" /></label>
+        <div class="button-row">
+          <button id="saveVoiceSettings">Enregistrer</button>
+          <button id="recordActivation">Enregistrer activation</button>
+          <button id="recordDeactivation">Enregistrer désactivation</button>
+        </div>
+        <div id="enrollmentStatus" class="hint"></div>
+        <ul id="wakeSamples" class="compact-list"></ul>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Connecteurs</h2></div>
+        <div id="connectorHealth"></div>
+        <label>Racine Excel autorisée<input id="allowedRoot" /></label>
+        <button id="saveConnectorRoot">Mettre à jour</button>
+      </article>
+    </section>
+
+    <section class="column conversation">
+      <article class="card conversation-card">
+        <div class="card-title"><h2>Conversation live</h2><span id="transcriptCount" class="badge">0 segment</span></div>
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+        <div class="injector">
+          <textarea id="injectText" rows="3" placeholder="Ex. L’action Sécuriser le portail est terminée."></textarea>
+          <div class="button-row wrap">
+            <select id="speakerHint" aria-label="Locuteur">
+              <option value="Alice">Speaker 1 · Alice (hint)</option>
+              <option value="Bob">Speaker 2 · Bob (hint)</option>
+              <option value="Charlie">Speaker 3 · Charlie (hint)</option>
+            </select>
+            <label class="check"><input id="overlap" type="checkbox" /> Chevauchement</label>
+            <label class="check"><input id="autoRoute" type="checkbox" checked /> Router l’action</label>
+            <button id="injectTranscript" class="accent">Injecter fixture</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Question à Jarvis</h2></div>
+        <div class="button-row stretch">
+          <input id="askText" placeholder="Quelles décisions ont été prises ?" />
+          <button id="askJarvis">Envoyer</button>
+        </div>
+        <div id="assistantAnswer" class="answer"></div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Timeline brute</h2><button id="toggleRaw" class="ghost">Afficher</button></div>
+        <div id="rawEvents" class="raw-events hidden"></div>
+      </article>
+    </section>
+
+    <section class="column action">
+      <article class="card">
+        <div class="card-title"><h2>Compréhension</h2><span id="factCount" class="badge">0 fait</span></div>
+        <div id="facts" class="fact-list empty-state">Aucun fait structuré.</div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Plan & politique</h2><span id="policyBadge" class="badge warn">manuel</span></div>
+        <label>Politique update_roadmap
+          <select id="policyMode">
+            <option value="disabled">Désactivée</option>
+            <option value="manual" selected>Manuelle</option>
+            <option value="automatic">Automatique</option>
+          </select>
+        </label>
+        <button id="savePolicy">Appliquer la politique</button>
+        <ol id="planSteps" class="plan-list"><li class="muted">Aucun plan.</li></ol>
+        <div id="approvalBox" class="approval-box hidden">
+          <strong>Validation requise</strong>
+          <div id="approvalPreview"></div>
+          <div class="button-row">
+            <button id="approvePlan" class="success">Approuver</button>
+            <button id="rejectPlan" class="danger">Rejeter</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Exécution des outils</h2><span id="toolCount" class="badge">0 appel</span></div>
+        <div id="toolTimeline" class="tool-timeline empty-state">Aucun outil appelé.</div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Résultat / artefact</h2></div>
+        <div id="artifactViewer" class="empty-state">Aucun artefact produit.</div>
+      </article>
+
+      <article class="card">
+        <div class="card-title"><h2>Modèles</h2></div>
+        <label>Fournisseur<select id="providerSelect"></select></label>
+        <label>Rôle<select id="modelRole">
+          <option value="realtime">realtime</option>
+          <option value="transcription">transcription</option>
+          <option value="analysis">analysis</option>
+          <option value="classification">classification</option>
+        </select></label>
+        <label>ID du modèle<input id="modelId" placeholder="Configuré et vérifié à l’exécution" /></label>
+        <div class="button-row">
+          <button id="assignModel">Assigner</button>
+          <button id="diagnoseProvider">Tester configuration</button>
+        </div>
+        <div id="providerDiagnostics" class="diagnostics"></div>
+        <p class="hint">GPT‑Live n’est pas supposé disponible dans l’API. Utiliser un modèle Realtime réellement accessible au projet.</p>
+      </article>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

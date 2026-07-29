@@ -1,0 +1,2 @@
+[console_scripts]
+jarvis-agent = jarvis_agent.web.api:main

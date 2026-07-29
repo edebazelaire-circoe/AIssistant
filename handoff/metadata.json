@@ -1,0 +1,10 @@
+{
+  "title": "Jarvis Local Meeting Agent V1 — Agent Inspector Handoff",
+  "created_at": "2026-07-29T14:01:00+02:00",
+  "source": "Reconstructed from the current French voice grill session",
+  "task_count": 21,
+  "language": "fr-FR",
+  "status": "implementation-ready-with-explicit-open-decisions",
+  "primary_use_case": "local meeting agent with visible tool execution and Excel roadmap updates",
+  "visuals_included": false
+}
