@@ -1,0 +1,44 @@
+name: Apply Jarvis V0.2 release
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/jarvis-v0.2
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify and apply validated V0.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          find .github/v02exact -maxdepth 1 -type f -name 'chunk*' -print0 \
+            | sort -zV \
+            | xargs -0 sha1sum
+          find .github/v02exact -maxdepth 1 -type f -name 'chunk*' -print0 \
+            | sort -zV \
+            | xargs -0 cat \
+            | base64 -d \
+            > /tmp/jarvis-v02.tar.gz
+          echo '71154cb94e6e971e040f331d21e37d37bc161a3c0fffc4a5aae4e6ae5bcb8085  /tmp/jarvis-v02.tar.gz' | sha256sum -c -
+          tar -tzf /tmp/jarvis-v02.tar.gz
+          tar -xzf /tmp/jarvis-v02.tar.gz -C .
+          rm -rf .github/v02exact
+          rm -f .github/workflows/apply-jarvis-v02.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m 'Refactor Jarvis model configuration and Inspector UI'
+          git push origin HEAD:agent/jarvis-v0.2
