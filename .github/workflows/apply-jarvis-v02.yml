@@ -23,7 +23,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/v02exact/chunk* | base64 -d > /tmp/jarvis-v02.tar.gz
+          find .github/v02exact -maxdepth 1 -type f -name 'chunk*' -print0 \
+            | sort -zV \
+            | xargs -0 cat \
+            | base64 -d \
+            > /tmp/jarvis-v02.tar.gz
           echo '71154cb94e6e971e040f331d21e37d37bc161a3c0fffc4a5aae4e6ae5bcb8085  /tmp/jarvis-v02.tar.gz' | sha256sum -c -
           tar -tzf /tmp/jarvis-v02.tar.gz
           tar -xzf /tmp/jarvis-v02.tar.gz -C .
