@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from jarvis_agent.application.config import secret_source
 from jarvis_agent.application.event_store import EventStore
 from jarvis_agent.domain.models import (
     ModelAssignment,
@@ -109,15 +110,20 @@ class ProviderManager:
     ) -> ProviderDiagnosticReport:
         stages: list[ProviderDiagnosticStage] = []
         secret = os.getenv(config.secret_reference)
+        source = secret_source(config.secret_reference)
         stages.append(
             ProviderDiagnosticStage(
                 stage="secret_present",
                 ok=bool(secret),
                 code=None if secret else "secret_missing",
                 message=(
-                    f"Secret reference {config.secret_reference} resolved"
+                    f"Secret reference {config.secret_reference} resolved from "
+                    f"{'a loaded .env file' if source == 'dotenv' else 'the process environment'}"
                     if secret
-                    else f"Environment variable {config.secret_reference} is missing"
+                    else (
+                        f"Environment variable {config.secret_reference} is missing in the "
+                        "running backend process and no matching value was loaded from .env"
+                    )
                 ),
             )
         )
@@ -209,7 +215,6 @@ class ProviderManager:
                         message=f"Inventory returned {len(models)} model identifiers",
                     )
                 )
-            # Role compatibility remains explicit configuration until a live adapter probe verifies it.
             role_ok = role is None or bool(model_id)
             stages.append(
                 ProviderDiagnosticStage(
@@ -268,6 +273,7 @@ class ProviderManager:
             {
                 **provider.model_dump(mode="json"),
                 "secret_present": bool(os.getenv(provider.secret_reference)),
+                "secret_source": secret_source(provider.secret_reference),
                 "assignments": {
                     role: value
                     for role, value in assignments.items()
