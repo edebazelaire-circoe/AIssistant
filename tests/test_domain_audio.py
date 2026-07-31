@@ -37,7 +37,7 @@ def test_state_machine_legal_transitions_and_hard_stop() -> None:
 def test_state_machine_rejects_illegal_transition() -> None:
     machine = AgentStateMachine()
     with pytest.raises(InvalidTransition) as exc:
-        machine.transition(AgentState.INTERACTIVE, "skip")
+        machine.transition(AgentState.ERROR_RECOVERABLE, "skip")
     assert exc.value.diagnostic.code.value == "invalid_transition"
 
 
