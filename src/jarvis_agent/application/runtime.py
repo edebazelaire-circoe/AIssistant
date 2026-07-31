@@ -302,14 +302,9 @@ class JarvisRuntime:
                     source="wake_detector",
                 )
                 if phrase_type == "activation":
-                    target = (
-                        AgentState.INTERACTIVE
-                        if self.state_machine.state == AgentState.TRANSCRIBING
-                        else AgentState.TRANSCRIBING
-                    )
-                    await self.set_state(target, reason="wake_activation")
+                    await self.set_state(AgentState.INTERACTIVE, reason="wake_activation")
                 else:
-                    await self.set_state(AgentState.TRANSCRIBING, reason="wake_deactivation")
+                    await self.set_state(AgentState.STANDBY, reason="wake_deactivation")
         return CommandResult(status=ResultStatus.SUCCESS, summary="Audio frame accepted")
 
     async def enroll_wake(
@@ -401,10 +396,10 @@ class JarvisRuntime:
         phrase = str(self.store.get_setting("wake.activation_phrase", "hey jarvis")).lower()
         deactivation = str(self.store.get_setting("wake.deactivation_phrase", "merci jarvis")).lower()
         lowered = text.lower()
-        if phrase and phrase in lowered and self.state_machine.state == AgentState.TRANSCRIBING:
+        if phrase and phrase in lowered and self.state_machine.state == AgentState.STANDBY:
             await self.set_state(AgentState.INTERACTIVE, reason="text_fixture_wake")
         if deactivation and deactivation in lowered and self.state_machine.state == AgentState.INTERACTIVE:
-            await self.set_state(AgentState.TRANSCRIBING, reason="text_fixture_deactivation")
+            await self.set_state(AgentState.STANDBY, reason="text_fixture_deactivation")
         routed: CommandResult | None = None
         if auto_route:
             parsed = parse_roadmap_update(text)
@@ -476,6 +471,11 @@ class JarvisRuntime:
             "wake.threshold",
             "audio.buffer_ms",
             "connector.excel.allowed_root",
+            "prompt.realtime",
+            "prompt.transcription",
+            "prompt.analysis",
+            "prompt.classification",
+            "meeting.auto_analyze",
         }
         for key, value in values.items():
             if key not in allowed_keys:
@@ -501,6 +501,25 @@ class JarvisRuntime:
             "wake.threshold": self.wake_detector.threshold,
             "audio.buffer_ms": self.audio_buffer.capacity_ms,
             "connector.excel.allowed_root": str(self.excel_connector.allowed_root),
+            "prompt.realtime": self.store.get_setting(
+                "prompt.realtime",
+                "Tu es Jarvis, un assistant de réunion concis. Signale clairement ce que tu fais.",
+            ),
+            "prompt.transcription": self.store.get_setting(
+                "prompt.transcription",
+                "Transcris fidèlement en français et conserve les noms propres.",
+            ),
+            "prompt.analysis": self.store.get_setting(
+                "prompt.analysis",
+                "Extrais les décisions, actions, responsables, échéances, risques et points ouverts.",
+            ),
+            "prompt.classification": self.store.get_setting(
+                "prompt.classification",
+                "Classe les intentions sans déclencher d'action irréversible sans validation.",
+            ),
+            "meeting.auto_analyze": bool(
+                self.store.get_setting("meeting.auto_analyze", False)
+            ),
         }
 
     def status(self) -> dict[str, Any]:

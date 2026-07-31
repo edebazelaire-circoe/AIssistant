@@ -6,8 +6,8 @@ from jarvis_agent.domain.models import AgentState, Diagnostic, ErrorCode
 
 
 _ALLOWED: dict[AgentState, set[AgentState]] = {
-    AgentState.MIC_OFF: {AgentState.STANDBY},
-    AgentState.STANDBY: {AgentState.MIC_OFF, AgentState.TRANSCRIBING},
+    AgentState.MIC_OFF: {AgentState.STANDBY, AgentState.TRANSCRIBING, AgentState.INTERACTIVE},
+    AgentState.STANDBY: {AgentState.MIC_OFF, AgentState.TRANSCRIBING, AgentState.INTERACTIVE},
     AgentState.TRANSCRIBING: {
         AgentState.MIC_OFF,
         AgentState.STANDBY,
